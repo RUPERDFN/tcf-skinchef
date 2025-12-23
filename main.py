@@ -12,7 +12,12 @@ from openai import OpenAI
 
 app = FastAPI(title="tcf-skinchef", description="AI Meal Menu Generation Service")
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+def get_openai_client():
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY environment variable is not set")
+    return OpenAI(api_key=api_key)
 
 SYSTEM_PROMPT = """Eres un chef experto español que crea menús semanales personalizados. Debes seguir estas reglas ESTRICTAMENTE:
 
@@ -37,7 +42,7 @@ def get_db_connection():
     return psycopg2.connect(os.environ["DATABASE_URL"], cursor_factory=RealDictCursor)
 
 
-def log_ai_run(kind: str, input_json: dict, output_json: dict = None, model: str = None, tokens: int = None, error: str = None):
+def log_ai_run(kind: str, input_json: dict, output_json: Optional[dict] = None, model: Optional[str] = None, tokens: Optional[int] = None, error: Optional[str] = None):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -195,7 +200,7 @@ Responde con el siguiente formato JSON exacto:
 }}"""
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -249,7 +254,7 @@ Devuelve el menú completo actualizado con la nueva comida y la lista de compras
 Usa el mismo formato JSON que el menú original."""
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -305,7 +310,7 @@ Responde con el siguiente formato JSON:
 }}"""
 
     try:
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
